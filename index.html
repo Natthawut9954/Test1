@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>bankkiy Stock</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-4">
+  <h1 class="text-2xl font-bold mb-4">📦 ระบบสต๊อกสินค้า - bankkiy Stock</h1>
+
+  <!-- เมนูแท็บ -->
+  <div class="flex space-x-2 mb-4">
+    <button onclick="showTab('tab-add')" class="bg-blue-500 text-white px-4 py-2 rounded">เพิ่มสินค้า</button>
+    <button onclick="showTab('tab-purchase')" class="bg-green-500 text-white px-4 py-2 rounded">ซื้อสินค้า</button>
+    <button onclick="showTab('tab-sale')" class="bg-yellow-500 text-white px-4 py-2 rounded">ขายสินค้า</button>
+    <button onclick="showTab('tab-stock')" class="bg-gray-700 text-white px-4 py-2 rounded">คงเหลือ</button>
+  </div>
+
+  <!-- เพิ่มสินค้า -->
+  <section id="tab-add" class="tab hidden">
+    <h2 class="text-xl font-bold mb-2">เพิ่มสินค้าใหม่</h2>
+    <input id="pCode" placeholder="รหัสสินค้า" class="border p-2 rounded w-full mb-2">
+    <input id="pName" placeholder="ชื่อสินค้า" class="border p-2 rounded w-full mb-2">
+    <input id="pStock" type="number" placeholder="จำนวนเริ่มต้น" class="border p-2 rounded w-full mb-2">
+    <button onclick="addProduct()" class="bg-blue-500 text-white px-4 py-2 rounded">บันทึกสินค้า</button>
+  </section>
+
+  <!-- ซื้อสินค้า -->
+  <section id="tab-purchase" class="tab hidden">
+    <h2 class="text-xl font-bold mb-2">ซื้อสินค้า</h2>
+    <select id="purchaseProduct" class="border p-2 rounded w-full mb-2"></select>
+    <input id="purchaseQty" type="number" placeholder="จำนวน" class="border p-2 rounded w-full mb-2">
+    <input id="purchasePrice" type="number" placeholder="ราคาต่อหน่วย" class="border p-2 rounded w-full mb-2">
+    <button onclick="savePurchase()" class="bg-green-500 text-white px-4 py-2 rounded">บันทึกการซื้อ</button>
+
+    <h3 class="text-lg font-semibold mt-4">ประวัติการซื้อ</h3>
+    <table class="w-full border bg-white rounded">
+      <thead class="bg-gray-200">
+        <tr>
+          <th class="border p-2">รหัสสินค้า</th>
+          <th class="border p-2">จำนวน</th>
+          <th class="border p-2">ราคา</th>
+        </tr>
+      </thead>
+      <tbody id="purchaseHistory"></tbody>
+    </table>
+  </section>
+
+  <!-- ขายสินค้า -->
+  <section id="tab-sale" class="tab hidden">
+    <h2 class="text-xl font-bold mb-2">ขายสินค้า</h2>
+
+    <div id="saleItems"></div>
+    <button onclick="addSaleRow()" class="bg-green-500 text-white px-3 py-1 rounded my-2">+ เพิ่มสินค้า</button>
+    <textarea id="saleNote" placeholder="หมายเหตุ" class="w-full border rounded p-2 mb-2"></textarea>
+    <button onclick="saveSale()" class="bg-blue-500 text-white px-4 py-2 rounded">บันทึกการขาย</button>
+
+    <h3 class="text-lg font-semibold mt-4">ประวัติการขาย</h3>
+    <table class="w-full border bg-white rounded">
+      <thead class="bg-gray-200">
+        <tr>
+          <th class="border p-2">เลขที่บิล</th>
+          <th class="border p-2">สินค้า</th>
+          <th class="border p-2">จำนวน</th>
+          <th class="border p-2">ราคา</th>
+          <th class="border p-2">รวม</th>
+        </tr>
+      </thead>
+      <tbody id="saleHistory"></tbody>
+    </table>
+  </section>
+
+  <!-- คงเหลือ -->
+  <section id="tab-stock" class="tab hidden">
+    <h2 class="text-xl font-bold mb-2">สินค้าคงเหลือ</h2>
+    <table class="w-full border bg-white rounded">
+      <thead class="bg-gray-200">
+        <tr>
+          <th class="border p-2">รหัสสินค้า</th>
+          <th class="border p-2">ชื่อสินค้า</th>
+          <th class="border p-2">คงเหลือ</th>
+        </tr>
+      </thead>
+      <tbody id="stockTable"></tbody>
+    </table>
+  </section>
+
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { getDatabase, ref, set, push, update, get, onValue } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+
+    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyBO0LAD9fANKIG_ZASru-_if0lZTEdGzPA",
+  authDomain: "ecom-d078d.firebaseapp.com",
+  databaseURL: "https://ecom-d078d-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "ecom-d078d",
+  storageBucket: "ecom-d078d.firebasestorage.app",
+  messagingSenderId: "1062550157110",
+  appId: "1:1062550157110:web:addc87a87f5c1c1506e597",
+  measurementId: "G-JWZ7KRH91R"
+};
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // === UI ===
+    window.showTab = function(id) {
+      document.querySelectorAll(".tab").forEach(t => t.classList.add("hidden"));
+      document.getElementById(id).classList.remove("hidden");
+    };
+
+    // === เพิ่มสินค้า ===
+    window.addProduct = function() {
+      const code = document.getElementById("pCode").value;
+      const name = document.getElementById("pName").value;
+      const stock = parseInt(document.getElementById("pStock").value) || 0;
+
+      if (!code || !name) return alert("กรอกข้อมูลให้ครบ");
+      set(ref(db, "products/" + code), { code, name, stock }).then(() => {
+        alert("เพิ่มสินค้าเรียบร้อย");
+        loadProducts();
+        document.getElementById("pCode").value="";
+        document.getElementById("pName").value="";
+        document.getElementById("pStock").value="";
+      });
+    };
+
+    function loadProducts() {
+      const refProd = ref(db, "products");
+      onValue(refProd, snapshot => {
+        const data = snapshot.val() || {};
+        let html = "";
+        Object.values(data).forEach(p => {
+          html += `<tr><td class="border p-2">${p.code}</td><td class="border p-2">${p.name}</td><td class="border p-2">${p.stock}</td></tr>`;
+        });
+        document.getElementById("stockTable").innerHTML = html;
+
+        // dropdown ในหน้าซื้อ
+        let opt = "";
+        Object.values(data).forEach(p => {
+          opt += `<option value="${p.code}">${p.name}</option>`;
+        });
+        document.getElementById("purchaseProduct").innerHTML = opt;
+      });
+    }
+
+    // === ซื้อสินค้า ===
+    window.savePurchase = function() {
+      const code = document.getElementById("purchaseProduct").value;
+      const qty = parseInt(document.getElementById("purchaseQty").value) || 0;
+      const price = parseFloat(document.getElementById("purchasePrice").value) || 0;
+
+      if (!code || qty<=0) return alert("กรอกข้อมูลให้ครบ");
+
+      // เพิ่มสต๊อก
+      const productRef = ref(db, "products/" + code);
+      get(productRef).then(snap => {
+        if (snap.exists()) {
+          const old = snap.val().stock || 0;
+          update(productRef, { stock: old + qty });
+        }
+      });
+
+      // บันทึกประวัติ
+      const pRef = push(ref(db, "purchases"));
+      set(pRef, { code, qty, price, date: Date.now() });
+
+      document.getElementById("purchaseQty").value="";
+      document.getElementById("purchasePrice").value="";
+    };
+
+    function loadPurchaseHistory() {
+      const refPur = ref(db, "purchases");
+      onValue(refPur, snapshot => {
+        const data = snapshot.val() || {};
+        let html = "";
+        Object.values(data).forEach(p => {
+          html += `<tr><td class="border p-2">${p.code}</td><td class="border p-2">${p.qty}</td><td class="border p-2">${p.price}</td></tr>`;
+        });
+        document.getElementById("purchaseHistory").innerHTML = html;
+      });
+    }
+
+    // === ขายสินค้า ===
+    window.addSaleRow = function() {
+      const div = document.createElement("div");
+      div.className = "flex space-x-2 mb-2";
+      div.innerHTML = `
+        <select class="border p-1 rounded w-1/3 productSelect"></select>
+        <input type="number" placeholder="จำนวน" class="border p-1 rounded w-1/6 qty">
+        <input type="number" placeholder="ราคา" class="border p-1 rounded w-1/6 price">
+        <button onclick="this.parentElement.remove()" class="bg-red-500 text-white px-2 rounded">ลบ</button>
+      `;
+      document.getElementById("saleItems").appendChild(div);
+      loadProductOptions(div.querySelector(".productSelect"));
+    };
+
+    function loadProductOptions(selectEl) {
+      const refProd = ref(db, "products");
+      get(refProd).then(snap => {
+        if (!snap.exists()) return;
+        selectEl.innerHTML = "";
+        Object.values(snap.val()).forEach(p => {
+          selectEl.innerHTML += `<option value="${p.code}">${p.name}</option>`;
+        });
+      });
+    }
+
+    function genDocNo() {
+      const d = new Date();
+      const ymd = d.toISOString().slice(0,10).replace(/-/g,"");
+      return "S-" + ymd + "-" + Math.floor(Math.random()*10000);
+    }
+
+    window.saveSale = function() {
+      const rows = document.querySelectorAll("#saleItems > div");
+      if (rows.length === 0) return alert("เพิ่มสินค้าอย่างน้อย 1 รายการ");
+
+      const docNo = genDocNo();
+      const note = document.getElementById("saleNote").value;
+      let sale = { docNo, note, date: Date.now(), items: [], total: 0 };
+
+      rows.forEach(r => {
+        const product = r.querySelector(".productSelect").value;
+        const qty = parseInt(r.querySelector(".qty").value) || 0;
+        const price = parseFloat(r.querySelector(".price").value) || 0;
+        const amount = qty * price;
+        sale.items.push({ product, qty, price, amount });
+        sale.total += amount;
+
+        // หักสต๊อก
+        const refProd = ref(db, "products/" + product);
+        get(refProd).then(snap => {
+          if (snap.exists()) {
+            const old = snap.val().stock || 0;
+            update(refProd, { stock: old - qty });
+          }
+        });
+      });
+
+      set(ref(db, "sales/" + docNo), sale).then(()=>{
+        alert("บันทึกการขายเรียบร้อย");
+        document.getElementById("saleItems").innerHTML="";
+        document.getElementById("saleNote").value="";
+      });
+    };
+
+    function loadSaleHistory() {
+      const refSale = ref(db, "sales");
+      onValue(refSale, snapshot => {
+        const data = snapshot.val() || {};
+        let html = "";
+        Object.values(data).forEach(s => {
+          s.items.forEach(it => {
+            html += `<tr>
+              <td class="border p-2">${s.docNo}</td>
+              <td class="border p-2">${it.product}</td>
+              <td class="border p-2 text-right">${it.qty}</td>
+              <td class="border p-2 text-right">${it.price}</td>
+              <td class="border p-2 text-right">${it.amount}</td>
+            </tr>`;
+          });
+        });
+        document.getElementById("saleHistory").innerHTML = html;
+      });
+    }
+
+    // === โหลดเริ่มต้น ===
+    document.addEventListener("DOMContentLoaded", () => {
+      loadProducts();
+      loadPurchaseHistory();
+      loadSaleHistory();
+      showTab('tab-stock');
+    });
+  </script>
+</body>
+</html>
